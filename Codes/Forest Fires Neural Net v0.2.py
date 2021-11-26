@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 #---------------
 
 k = 3;						# Number of folds for k-fold cross validation
-num_epochs = 5;			# Number of epochs for training
+num_epochs = 5;				# Number of epochs for training
 features = 'FWI';			# Options are 'STFWI,' 'STM,' 'FWI,' 'M,' or 'ALL'
 ONE_HOT = 0;
 TIME_TRANSFORM = 1;         # Not yet implemented
@@ -20,6 +20,7 @@ TIME_TRANSFORM = 1;         # Not yet implemented
 
 ff_df = pd.read_csv("../Data/forestfires.csv") # Load as Pandas Dataframe
 ff_df['logarea'] = np.log(ff_df.area + 1) # Log transform for response variable
+
 
 # Convert month str to number
 ff_df['month'] = [dt.datetime.strptime(x, '%b').month for x in ff_df['month'] ]
@@ -48,6 +49,20 @@ if ONE_HOT == 1 :
 	ff_df = ff_df.drop(columns=['month','day'])
 
 ff = np.array(ff_df) # Convert to numpy array
+
+area_mean = np.mean(ff[:,12])
+area_std = np.std(ff[:,12])
+
+print(area_mean)
+print(area_std)
+
+log_area_mean = np.mean(ff[:,13])
+log_area_std = np.std(ff[:,13])
+
+print(log_area_mean)
+print(log_area_std)
+
+
 # ---------------------------------------------------------------------------- #
 # Hyperparameters to be optimized?
 # Number of hidden layers
@@ -64,7 +79,7 @@ if ONE_HOT == 0:
 		ff_response = ff[:,13]
 	if features == 'FWI':
 		ff_features = ff[:,4:8]
-		ff_response = ff[:,13]
+		ff_response = ff[:,12]
 	if features == 'M':
 		ff_features = ff[:,8:12]
 		ff_response = ff[:,13]
@@ -114,7 +129,6 @@ print("Shape of test data:",test_data.shape)
 print("Shape of training targets:",train_targets.shape)
 print("Shape of test targets:", test_targets.shape)
 
-
 #------------------
 # Normalize data
 #------------------
@@ -138,10 +152,9 @@ test_targets /= Ystd
 
 print("Mean of features:",Xmean)
 print("Standard deviation of features:",Xstd)
-print("Mean of log area:",Ymean)
-print("Standard deviation of log area:",Ystd)
-print("Mean of area:",np.exp(Ymean)-1)
-print("Standard deviation of area:",np.exp(Ystd)-1)
+print("Mean of log-transformed area:",Ymean)
+print("Standard deviation of log-transformed area:",Ystd)
+
 
 #------------------
 # Define model
@@ -151,8 +164,11 @@ from tensorflow.keras import layers
 
 def build_model():
 	model = models.Sequential()
-	model.add(layers.Dense(2, activation='relu',input_shape=(train_data.shape[1],)))
-	#model.add(layers.Dense(2, activation='relu'))
+	model.add(layers.Dense(32, activation='relu',input_shape=(train_data.shape[1],)))
+	model.add(layers.Dense(32, activation='relu'))
+	model.add(layers.Dense(32, activation='relu'))
+	model.add(layers.Dense(32, activation='relu'))
+	model.add(layers.Dense(32, activation='relu'))
 	model.add(layers.Dense(1))
 	model.compile(optimizer='rmsprop',
 	            loss='mae',
@@ -160,9 +176,8 @@ def build_model():
 	return model
 
 
-
-modelx = build_model()
-modelx.summary()
+model_ex = build_model()
+model_ex.summary()
 
 #------------------
 # K-fold validation
@@ -173,6 +188,8 @@ val_mae_list = []
 val_rmse_list = []
 train_mae_list = []
 train_rmse_list = []
+all_mae_scores = []
+all_rmse_scores = []
 
 
 for i in range(k):
@@ -192,8 +209,8 @@ for i in range(k):
 		 train_targets[(i + 1) * num_val_samples:]],
 		axis=0).astype(np.int)
 	
-	print(partial_train_data.shape)
-	print(partial_train_targets.shape)
+
+	print("folk #",i,"shape:",partial_train_data.shape)
 	
 	model1 = build_model()
 	history = model1.fit(partial_train_data,
@@ -201,7 +218,13 @@ for i in range(k):
 						 epochs = num_epochs,
 						 batch_size=1,
 						 validation_data=(val_data, val_targets),
-						 verbose=2)
+						 verbose=1)
+
+
+	print("Evaluate model from fold #", i, "on validation data:")
+	val_mae, val_rmse = model1.evaluate(val_data, val_targets, verbose=1)
+	all_mae_scores.append(val_mae)
+	all_rmse_scores.append(val_rmse)
 
 	# MAE Loss
 	train_mae_history = history.history['loss']
@@ -209,7 +232,6 @@ for i in range(k):
 
 	val_mae_history = history.history['val_loss']
 	val_mae_list.append(val_mae_history) 
-	
 
 	# RMSE  
 	train_rmse_history = history.history['root_mean_squared_error']
@@ -217,6 +239,7 @@ for i in range(k):
 
 	val_rmse_history = history.history['val_root_mean_squared_error']
 	val_rmse_list.append(val_rmse_history)
+
 
 
 # Calculate the averages
@@ -252,20 +275,25 @@ plt.show()
 plt.close()
 
 
-
 # ---------------------------------------------------------------------------- #
-print("Average MAE:", np.mean(train_mae_list))
-print("Average RMSE:", np.mean(val_rmse_list))
-print("Average MAE (unnormalized):", Ystd*np.mean(train_mae_list)+Ymean)
-print("Average RMSE (unnormalized):", Ystd*np.mean(val_rmse_list)+Ymean)
-print("Average MAE (unnormalized and transformed back):", np.exp(Ystd*np.mean(train_mae_list)+Ymean)-1)
-print("Average RMSE (unnormalized and transformed back):", np.exp(Ystd*np.mean(val_rmse_list)+Ymean)-1)
+
+print("MAE across all folds:",all_mae_scores)
+print("Average MAE:",np.mean(all_mae_scores))
+print("Average MAE (unnormalized):", area_std*np.mean(all_mae_scores))
+
+print("RMSE across all folds:",all_rmse_scores)
+print("Average RMSE:",np.mean(all_rmse_scores))
+print("Average RMSE (unnormalized):", Ystd*np.mean(all_rmse_scores))
 
 test_mae_score, test_rmse_score = model1.evaluate(test_data, test_targets)
-print("Mean absolute error of model on test data:",test_mae_score)
 
+print("MAE of model on test data:",test_mae_score)
+print("RMSE of model on test data:",test_rmse_score)
+print("MAE of model on test data (unnormalized):",test_mae_score*Ystd)
+print("RMSE of model on test data (unnormalized):",test_rmse_score*Ystd)
 
 exit()
+
 
 # ---------------------------------------------------------------------------- #
 # Fit the best model after grid search
@@ -294,7 +322,7 @@ print("Average absolute error (test MAE * Ystd):", test_mae_score*Ystd)
 Ypred_train = best_model.predict(train_data)
 Ypred_test = best_model.predict(test_data)
 
-# Unnomarlize
+# Unnormalize
 train_targets=Ystd*train_targets+Ymean
 test_targets=Ystd*test_targets+Ymean
 
