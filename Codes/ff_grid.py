@@ -14,21 +14,20 @@ from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.model_selection import GridSearchCV
 from tensorflow.keras.activations import *
 
-from sklearn.metrics import  mean_squared_error #, mean_absolute_error,
+from sklearn.metrics import  mean_squared_error, mean_absolute_error
 #---------------
 # User parameters
 #---------------
 
-k = 2;						# Number of folds for k-fold cross validation
-num_epochs = 2;				# Number of epochs for training
-features = 'FWI';			# Options are 'STFWI,' 'STM,' 'FWI,' 'M,' or 'ALL'
+k = 10;						# Number of folds for k-fold cross validation
+num_epochs = 50;				# Number of epochs for training
+features = 'ALL';			# Options are 'STFWI,' 'STM,' 'FWI,' 'M,' or 'ALL'
 
 #-----------------------
 # GridSearch parameters
 #-----------------------
-optimizers = ['RMSprop','Adam']
+optimizers = ['SGD','RMSprop','Adam','Adadelta','Adagrad','Adamax','Nadam','Ftrl']
 activations = ['relu','tanh']
-epochs = [5,10]
 batches = [1]
 init = ['normal','uniform']
 #------------------
@@ -123,45 +122,57 @@ print("Standard deviation of log-transformed area:",Ystd)
 # Define model
 #------------------
 def build_model(activation='relu',
-                optimizer='rmsprop'):
+                optimizer='rmsprop',
+                init='normal'):
     model = models.Sequential()
     model.add(layers.Dense(64, activation=activation,input_shape=(train_data.shape[1],)))
+    model.add(layers.Dropout(0.2))
     model.add(layers.Dense(1))
     model.compile(optimizer='rmsprop',
                 loss='mae')
     return model
 
-model = KerasRegressor(build_fn=build_model, epochs=10, batch_size=1, verbose=1)
+model = KerasRegressor(build_fn=build_model, epochs=num_epochs,batch_size=1, verbose=1)
 
 # ---------------------------------------------------------------------------- #
 param_grid = dict(activation = activations,
-                  optimizer = optimizers,)
+                  optimizer = optimizers,
+                  init=init)
 grid = GridSearchCV(estimator=model,
                     param_grid=param_grid,
                     scoring = 'neg_mean_squared_error',
                     cv = k,
-                    verbose = 2,
-                    return_train_score=True)
+                    verbose = 0,
+                    refit = True,
+                    return_train_score=True,
+                    n_jobs=-1)
 grid_result = grid.fit(train_data, train_targets)
 
 # ---------------------------------------------------------------------------- #
 # ---------------
 # Save results
 # ---------------
+
+
+pred_targets = grid_result.predict(test_data)
+
+print(f'Best params: {grid_result.best_params_}')
+print(f'Best score: {grid_result.best_score_}')
+print(f'Test MSE: {mean_squared_error(y_true=test_targets, y_pred=pred_targets)}')
+print(f'Test MAE: {mean_absolute_error(y_true=test_targets, y_pred=pred_targets)}')
+
+print("Best MSE (unnormalized):", Ystd*mean_squared_error(y_true=test_targets, y_pred=pred_targets))
+print("Best MAE (unnormalized):", Ystd*mean_absolute_error(y_true=test_targets, y_pred=pred_targets))
+
+# Other scores
 # From train split
 means_train = grid_result.cv_results_['mean_train_score']
 # From test split
 means_val = grid_result.cv_results_['mean_test_score']
-print(means_val)
-
 
 params = grid_result.cv_results_['params']
 
-# summarize results
-print("Best RMSE: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
-# Unnormalize
-print("Best RMSE (unnormalized):", Ystd*-grid_result.best_score_)
-
+print("\nOther scores:")
 
 for param, mean_t, mean_v in zip(params, means_train, means_val):
     print("%r: train: %f, val: %f" % (param, mean_t, mean_v))
