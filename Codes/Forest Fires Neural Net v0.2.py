@@ -84,7 +84,7 @@ if ONE_HOT == 0:
 		ff_features = ff[:,8:12]
 		ff_response = ff[:,13]
 	if features == 'STM':
-		ff_features = ff[:,[0,1,2,3,8,9,10,11,12]]
+		ff_features = ff[:,[0,1,2,3,8,9,10,11]]
 		ff_response = ff[:,13]
 	if features == 'ALL':
 		ff_features = ff[:,0:12]
@@ -164,11 +164,11 @@ from tensorflow.keras import layers
 
 def build_model():
 	model = models.Sequential()
-	model.add(layers.Dense(32, activation='relu',input_shape=(train_data.shape[1],)))
-	model.add(layers.Dense(32, activation='relu'))
-	model.add(layers.Dense(32, activation='relu'))
-	model.add(layers.Dense(32, activation='relu'))
-	model.add(layers.Dense(32, activation='relu'))
+	model.add(layers.Dense(4, activation='relu',input_shape=(train_data.shape[1],)))
+	model.add(layers.Dense(4, activation='relu'))
+#	model.add(layers.Dense(32, activation='relu'))
+#	model.add(layers.Dense(32, activation='relu'))
+#	model.add(layers.Dense(32, activation='relu'))
 	model.add(layers.Dense(1))
 	model.compile(optimizer='rmsprop',
 	            loss='mae',
