@@ -5,5 +5,6 @@ This repository contains the files for the final group project of Hrishikesh Kul
 3) visualizations of the response variable (area_no_log.png and area_with_log.png) and predictor variables (input_hist.png),
 4) code to run two grid searches on (Grid Search (One Hidden Layer).py and Grid Search (Two Hidden layers).py) the data,
 5) logs of the grid searchers (Grid Search (One Hidden Layer) Log.txt and Grid Search (Two Hidden Layers) Log.txt),
-6) plots of the grid search scores (Grid Search Scores (One Hidden Layer).png and Grid Search Scores (Two Hidden Layers).png), and
-7) maps of the neural networks with optimized hyperparameters (NN_1_layer.png and NN_2_layers.png).
+6) plots of the grid search scores (Grid Search Scores (One Hidden Layer).png and Grid Search Scores (Two Hidden Layers).png),
+7) maps of the neural networks with optimized hyperparameters (NN_1_layer.png and NN_2_layers.png), and
+8) the paper which inspired this analysis (A Data Mining Approach to Predict Forest Fires.pdf).
