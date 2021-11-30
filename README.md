@@ -1,5 +1,5 @@
 # Repo for Group Project
-This repository contains the files for the final group project of Hrishikesh Kulkarni, Chau Nguyen, and Sam Solomon in ANLY-590: Neural Networks and Deep Learning. These files include: 
+This repository contains the files for the final group project of Hrishikesh Kulkarni, Chau Nguyen, and Sam Solomon in ANLY-590: Neural Networks and Deep Learning. The files include: 
 1) the forest fire dataset (forestfires.csv), 
 2) code to generate data visualizations (Visualizations.py),
 3) visualizations of the response variable (area_no_log.png and area_with_log.png) and predictor variables (input_hist.png),
